@@ -3,6 +3,7 @@ import { parseCookies } from "nookies";
 import { FormEvent, useContext, useEffect, useState } from "react";
 import { AuthContext } from "../contexts/AuthContext";
 import styles from "../styles/Home.module.css";
+import { WithSSRGuest } from "../utils/WithSSRGuest";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -38,19 +39,8 @@ export default function Home() {
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const cookies = parseCookies(ctx);
-
-  if (cookies["nextauth.token"]) {
-    return {
-      redirect: {
-        destination: "/dashboard",
-        permanent: false,
-      },
-    };
-  }
-
+export const getServerSideProps = WithSSRGuest(async (ctx) => {
   return {
     props: {},
   };
-};
+});
