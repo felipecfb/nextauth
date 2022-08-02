@@ -6,18 +6,22 @@ import {
 import { destroyCookie, parseCookies } from "nookies";
 import { AuthTokenError } from "../services/errors/AuthTokenError";
 import decode from "jwt-decode";
+import { validateUserPermissions } from "./validateUserPermissions";
 
 type WithSSRAuthOptions = {
   permissions?: string[];
   roles?: string[];
-}
+};
 
-export function WithSSRAuth<P>(fn: GetServerSideProps<P>, options?: WithSSRAuthOptions): GetServerSideProps {
+export function WithSSRAuth<P>(
+  fn: GetServerSideProps<P>,
+  options?: WithSSRAuthOptions
+): GetServerSideProps {
   return async (
     ctx: GetServerSidePropsContext
   ): Promise<GetServerSidePropsResult<P>> => {
     const cookies = parseCookies(ctx);
-    const token = cookies["nextauth.token"]
+    const token = cookies["nextauth.token"];
 
     if (!token) {
       return {
@@ -28,9 +32,25 @@ export function WithSSRAuth<P>(fn: GetServerSideProps<P>, options?: WithSSRAuthO
       };
     }
 
-    const user = decode(token);
+    if (options) {
+      const user = decode<{ permissions: string[]; roles: string[] }>(token);
+      const { permissions, roles } = options;
 
-    console.log(user);
+      const userHasValidPermission = validateUserPermissions({
+        user,
+        permissions,
+        roles,
+      });
+
+      if (!userHasValidPermission) {
+        return {
+          redirect: {
+            destination: "/dashboard",
+            permanent: false,
+          }
+        }
+      }
+    }
 
     try {
       return await fn(ctx);
